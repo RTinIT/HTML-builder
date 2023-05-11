@@ -14,7 +14,20 @@ const getContent = async (file) => {
 };
 
 const getFiles = async (folder) => {
-  const files = await fs.readdir(folder);
+  const files = [];
+
+  const read = async (folder) => {
+    const data = await fs.readdir(folder, {withFileTypes: true});
+    for (const item of data) {
+      if (item.isFile()) {
+        files.push(item)
+      } else {
+        await read(path.join(folder, item.name));
+      }
+    }
+  }
+
+  await read(folder);
   return files;
 }; 
 
@@ -29,21 +42,24 @@ const createDir = async (firstPath, secondPath) => {
 };
 
 createDir(projectDist, assetsCopy);
+getFiles(path.join(__dirname, 'assets'));
 
 const copyDir = async (src, dest) => {
-  fs.mkdir(dest, { recursive: true });
+  await fs.mkdir(dest, { recursive: true });
+
   for (const file of await getFiles(dest)) {
-    fs.unlink(path.join(dest, file));
+    fs.unlink(path.join(dest, file.name));
   }
+
   for (const file of await getFiles(src)) {
-    fs.copyFile(path.join(src, file),
-      path.join(dest, file));
+    fs.copyFile(path.join(src, file.name),
+      path.join(dest, file.name));
   }
 };
 
-copyDir(path.join(__dirname, './assets/fonts'), path.join(__dirname, './project-dist/assets/fonts'));
-copyDir(path.join(__dirname, './assets/img'), path.join(__dirname, './project-dist/assets/img'));
-copyDir(path.join(__dirname, './assets/svg'), path.join(__dirname, './project-dist/assets/svg'));
+copyDir(path.join(__dirname, './assets/fonts/'), path.join(assetsCopy,'./fonts'));
+copyDir(path.join(__dirname, './assets/img/'), path.join(assetsCopy, './img'));
+copyDir(path.join(__dirname, './assets/svg/'), path.join(assetsCopy, './svg'));
 
 const createStyleFile = async (src, dest) => {
   fs.writeFile(dest, '');
